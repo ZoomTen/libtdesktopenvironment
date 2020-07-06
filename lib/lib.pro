@@ -61,7 +61,7 @@ unix {
         message("Building with NetworkManagerQt support");
     } else {
         exists($$[QT_INSTALL_LIBS]/libKF5NetworkManagerQt.so) {
-            INCLUDEPATH += $$[QT_INSTALL_HEADERS]/KF5/NetworkManagerQt/
+            INCLUDEPATH += /usr/include/KF5/NetworkManagerQt/
             LIBS += -lKF5NetworkManagerQt
 
             DEFINES += HAVE_NETWORKMANAGERQT
@@ -74,7 +74,7 @@ unix {
     exists($$[QT_INSTALL_LIBS]/libKF5PulseAudioQt.so) : packagesExist(libpulse) : packagesExist(libpulse-mainloop-glib) {
         PKGCONFIG += libpulse libpulse-mainloop-glib
         LIBS += -lKF5PulseAudioQt
-        INCLUDEPATH += $$[QT_INSTALL_HEADERS]/KF5/KF5PulseAudioQt/PulseAudioQt
+        INCLUDEPATH += /usr/include/KF5/KF5PulseAudioQt/PulseAudioQt
 
         DEFINES += HAVE_PULSE
         message("Building with pulseaudio support");
