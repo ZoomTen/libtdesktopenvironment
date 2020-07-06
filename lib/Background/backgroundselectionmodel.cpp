@@ -86,6 +86,26 @@ QVariant BackgroundSelectionModel::data(const QModelIndex& index, int role) cons
 
                 d->px.insert(index.row(), communityPx);
                 return communityPx;
+            } else if (bgName.startsWith("dynamic:")) {
+                QString text;
+                text = tr("Dynamic Wallpaper");
+
+                d->bg->getBackground(bgName, SC_DPI_T(QSize(213, 120), QSize))
+                        ->then([ = ](BackgroundController::BackgroundData data){
+
+                    QPixmap dynPx = data.px;
+
+                    QPainter painter(&dynPx);
+                    QFont fnt;
+                    fnt.setPointSize(12);
+                    painter.setFont(fnt);
+                    painter.setPen(Qt::white);
+                    painter.drawText(QRect(QPoint(0, 0), dynPx.size()), Qt::AlignCenter | Qt::TextWordWrap, text);
+                    painter.end();
+
+                    d->px.insert(index.row(), dynPx);
+                    QTimer::singleShot(0, this, &BackgroundSelectionModel::emitDataChanged);
+                });
             } else {
                 d->bg->getBackground(bgName, SC_DPI_T(QSize(213, 120), QSize))->then([ = ](BackgroundController::BackgroundData data) {
                     d->px.insert(index.row(), data.px);

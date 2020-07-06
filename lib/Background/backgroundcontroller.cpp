@@ -38,6 +38,9 @@ struct BackgroundControllerPrivate {
     uint lastPeriod = 0;
 
     QStringList additionalWallpapers;
+
+    QList<QTime> dynamicWallpaperTimes;
+    QTimer* dynWallpaperCheck;
 };
 
 BackgroundController::BackgroundController(BackgroundType type, QObject* parent) : QObject(parent) {
@@ -49,6 +52,24 @@ BackgroundController::BackgroundController(BackgroundType type, QObject* parent)
 
     d->timerId = this->startTimer(60000, Qt::VeryCoarseTimer);
 
+    d->dynWallpaperCheck = new QTimer();
+    d->dynWallpaperCheck->setTimerType(Qt::VeryCoarseTimer);
+    d->dynWallpaperCheck->setInterval(1000);
+
+    connect(d->dynWallpaperCheck, &QTimer::timeout,
+            this, [=]{
+        if (d->dynamicWallpaperTimes.count() != 0){
+            QTime currentTime = QTime::currentTime();
+            currentTime.setHMS(currentTime.hour(), currentTime.minute(), currentTime.second(), 0);
+            if (d->dynamicWallpaperTimes.indexOf(currentTime) != -1){
+                qDebug() << "dynamic wallpaper updated: " << currentTime;
+                emit updateDynWallpaper();
+            }
+        }
+    });
+
+    d->dynWallpaperCheck->start();
+
     //Find backgrounds from /usr/share/wallpapers and /usr/share/backgrounds
     searchWallpapers("/usr/share/wallpapers")->then([ = ](QStringList wallpapers) {
         d->additionalWallpapers.append(wallpapers);
@@ -58,9 +79,15 @@ BackgroundController::BackgroundController(BackgroundType type, QObject* parent)
         d->additionalWallpapers.append(wallpapers);
         emit availableWallpapersChanged(wallpapers.count());
     });
+
+    searchDynWallpapers("/usr/share/thedesk/dynwallpapers")->then([ = ](QStringList wallpapers) {
+        d->additionalWallpapers.append(wallpapers);
+        emit availableWallpapersChanged(wallpapers.count());
+    });
 }
 
 BackgroundController::~BackgroundController() {
+    delete d->dynWallpaperCheck;
     delete d;
 }
 
@@ -117,6 +144,7 @@ tPromise<BackgroundController::BackgroundData>* BackgroundController::getBackgro
         };
 
         if (backgroundName.startsWith("inbuilt:")) { //Inbuilt background
+             d->dynamicWallpaperTimes.clear();
             QSvgRenderer renderer(QStringLiteral(":/libtdesktopenvironment/backgrounds/%1.svg").arg(backgroundName.mid(backgroundName.indexOf(':') + 1)));
             if (!renderer.isValid()) {
                 rej("Unavailable Background");
@@ -127,6 +155,7 @@ tPromise<BackgroundController::BackgroundData>* BackgroundController::getBackgro
 
             res(data);
         } else if (backgroundName.startsWith("community")) {
+             d->dynamicWallpaperTimes.clear();
             QDir::home().mkpath(".theshell/backgrounds");
             bool metadataExists = QFile(QDir::homePath() + "/.theshell/backgrounds.conf").exists();
             bool expired = d->settings->value("desktop/fetched").toDateTime().secsTo(QDateTime::currentDateTimeUtc()) > 604800 /* 1 week */;
@@ -151,7 +180,75 @@ tPromise<BackgroundController::BackgroundData>* BackgroundController::getBackgro
                     rej(error);
                 });
             }
+        } else if (backgroundName.startsWith("dynamic:")){
+            QPixmap image;
+            QList<QTime> allTimes;
+            QList<QTime> definedTimes;
+
+            QString bgKey = backgroundName.split("dynamic:")[1];
+
+            QFile file("/usr/share/thedesk/dynwallpapers/"+bgKey+".json");
+            file.open(QIODevice::ReadOnly | QIODevice::Text);
+            QByteArray file_contents = file.readAll();
+            file.close();
+
+            QJsonDocument bgJson = QJsonDocument::fromJson(file_contents);
+            QJsonObject bgMeta = bgJson.object()["meta"].toObject();
+            QJsonArray bgData = bgJson.object()["data"].toArray();
+
+            qDebug() << "Title:" << bgMeta["title"].toString();
+            qDebug() << "Author:" << bgMeta["by"].toString();
+            qDebug() << "License:" << bgMeta["license"].toString();
+
+            for (int i=0; i < bgData.count(); ++i){
+                QJsonObject bgDataItem = bgData[i].toObject();
+                definedTimes.append(QTime::fromString(bgDataItem["showAt"].toString(), "HH:mm"));
+            }
+
+            allTimes = QList<QTime>(definedTimes);
+
+            QTime now = QTime::currentTime();
+            now.setHMS(now.hour(), now.minute(), 0, 0); // standardize
+
+            allTimes.append(now);
+            std::sort(allTimes.begin(), allTimes.end());
+
+            QString bgFileToUse = "";
+
+            if (allTimes.lastIndexOf(now) == 0){
+                bgFileToUse =
+                        bgData.last()
+                        .toObject()["file"]
+                        .toString();
+            } else if (allTimes.count(now) > 1) {
+                bgFileToUse =
+                        bgData[definedTimes.indexOf(now)]
+                        .toObject()["file"]
+                        .toString();
+            } else {
+                QTime targetTime = allTimes[allTimes.indexOf(now)-1];
+                bgFileToUse =
+                        bgData[definedTimes.indexOf(targetTime)]
+                        .toObject()["file"]
+                        .toString();
+            }
+
+            qDebug() << "now: " << now;
+            qDebug() << "definedTimes: " << definedTimes;
+            qDebug() << "allTimes: " << allTimes;
+            qDebug() << "bgFile: " << bgFileToUse;
+
+            d->dynamicWallpaperTimes = definedTimes;
+
+            if (!image.load(bgFileToUse)) {
+                rej("Invalid File");
+                return;
+            }
+
+            data.px = drawBackground(image);
+            res(data);
         } else {
+            d->dynamicWallpaperTimes.clear();
             QPixmap image;
             if (!image.load(backgroundName)) {
                 rej("Invalid File");
@@ -458,6 +555,25 @@ tPromise<QStringList>* BackgroundController::searchWallpapers(QString searchPath
             wallpapers.append(QStringLiteral("%1/%2x%3.%4").arg(path).arg(info.w).arg(info.h).arg(info.suffix));
         }
 
+        res(wallpapers);
+    });
+}
+
+tPromise<QStringList> *BackgroundController::searchDynWallpapers(QString searchPath)
+{
+    return tPromise<QStringList>::runOnNewThread([=](tPromiseFunctions<QStringList>::SuccessFunction res, tPromiseFunctions<QStringList>::FailureFunction rej) {
+        QStringList wallpapers;
+
+        QDirIterator iterator(searchPath);
+        while (iterator.hasNext()) {
+            iterator.next();
+            QFileInfo fi = iterator.fileInfo();
+            if (QStringList({"json"}).contains(fi.suffix())) {
+                    wallpapers.append(QStringLiteral("dynamic:%1").arg(fi.baseName()));
+            }
+        }
+
+        // return our wallpaper list
         res(wallpapers);
     });
 }

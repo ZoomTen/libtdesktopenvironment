@@ -74,6 +74,7 @@ class BackgroundController : public QObject {
         void newCommunityBackgroundsAvailable();
         void currentCommuntyBackgroundAvailable(QPixmap background);
         void availableWallpapersChanged(int newWallpapers);
+        void updateDynWallpaper();
 
     private:
         BackgroundControllerPrivate* d;
@@ -85,6 +86,7 @@ class BackgroundController : public QObject {
         tPromise<BackgroundData>* getCurrentCommunityBackground();
         uint communityBackgroundPeriod();
         tPromise<QStringList>* searchWallpapers(QString searchPath);
+        tPromise<QStringList>* searchDynWallpapers(QString searchPath);
 };
 
 #endif // BACKGROUNDCONTROLLER_H
