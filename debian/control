@@ -9,14 +9,14 @@ Homepage: https://github.com/vicr123/libtdesktopenvironment
 Package: libtdesktopenvironment1
 Section: libs
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libxss1, libxext, libxrandr2, libkf5networkmanagerqt6
+Depends: ${shlibs:Depends}, ${misc:Depends}, libxss1, libxext6, libxrandr2, libkf5networkmanagerqt6
 Description: Common functions for theDesk's shell component
  Common functions and classes used for theDesk itself.
 
 Package: libtdesktopenvironment-dev
 Section: libdevel
 Architecture: any
-Depends: libtdesktopenvironment (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
+Depends: libtdesktopenvironment1 (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
 Description: Common functions for theDesk's shell component (development headers)
  Common functions and classes used for theDesk itself. These
  contain the necessary headers.
