@@ -1,0 +1,3 @@
+/usr/include/*/qt5/libtdesktopenvironment/*.h
+/usr/include/*/qt5/libtdesktopenvironment/*/*.h
+/usr/lib/*/qt5/mkspecs/modules/qt_*.pri

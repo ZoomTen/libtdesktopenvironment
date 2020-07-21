@@ -1,0 +1,22 @@
+Source: libtdesktopenvironment
+Maintainer: Zumi Daxuya <daxuya.zumi+code@protonmail.com>
+Section: x11
+Priority: optional
+Build-Depends: debhelper (>=10), qt5-qmake, pkg-config, libthe-libs-dev, libqt5x11extras5-dev, qtmultimedia5-dev, libqt5svg5-dev, qttools5-dev-tools, libxss-dev, libxext-dev, libxrandr-dev, libkf5networkmanagerqt-dev, libxcb-keysyms1-dev, libxcb-xkb-dev
+Standards-Version: 4.5.0
+Homepage: https://github.com/vicr123/libtdesktopenvironment
+
+Package: libtdesktopenvironment1
+Section: libs
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libxss1, libxext, libxrandr2, libkf5networkmanagerqt6
+Description: Common functions for theDesk's shell component
+ Common functions and classes used for theDesk itself.
+
+Package: libtdesktopenvironment-dev
+Section: libdevel
+Architecture: any
+Depends: libtdesktopenvironment (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: Common functions for theDesk's shell component (development headers)
+ Common functions and classes used for theDesk itself. These
+ contain the necessary headers.

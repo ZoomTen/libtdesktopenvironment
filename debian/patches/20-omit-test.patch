@@ -1,0 +1,25 @@
+Description: Omit unit-tests since they will trip the build
+ .
+ libtdesktopenvironment (0.2-1) UNRELEASED; urgency=low
+ .
+   * Initial release.
+ .
+   * Known bugs: libkf5pulseaudioqt only available on unstable, so support
+                 for it is unavailable for now.
+Author: Zumi Daxuya <daxuya.zumi+code@protonmail.com>
+
+---
+Last-Update: 2020-07-21
+
+--- libtdesktopenvironment-0.2.orig/libtdesktopenvironment.pro
++++ libtdesktopenvironment-0.2/libtdesktopenvironment.pro
+@@ -6,8 +6,7 @@ testproj.subdir = test
+ testproj.depends = libproj
+ 
+ SUBDIRS += \
+-    libproj \
+-    testproj
++    libproj
+ 
+ CONFIG += qt
+ 

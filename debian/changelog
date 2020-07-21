@@ -1,0 +1,8 @@
+libtdesktopenvironment (0.2-1) UNRELEASED; urgency=low
+
+  * Initial release.
+  
+  * Known bugs: libkf5pulseaudioqt only available on unstable, so support
+                for it is unavailable for now.
+
+ -- Zumi Daxuya <daxuya.zumi+code@protonmail.com>  Tue, 21 Jul 2020 18:55:10 +0700
